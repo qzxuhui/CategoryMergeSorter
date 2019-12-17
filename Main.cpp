@@ -18,16 +18,13 @@ public:
 
     void print()
     {
-        std::cout << std::setw(10) << name;
-        std::cout << std::setw(10) << category;
-        std::cout << "     " << map_category_index_to_name[category];
+        std::cout << std::left << std::setw(10) << name;
         std::cout << std::endl;
     }
 
     void printResults(std::ofstream &fout)
     {
-        fout << std::setw(10) << name;
-        fout << "     " << map_category_index_to_name[category];
+        fout << std::left << std::setw(10) << name;
         fout << std::endl;
     }
 
@@ -193,14 +190,18 @@ std::list<Item> parseItemListFromFile(std::string input_filename)
 
     // parse file content
     std::list<Item> origin_list;
-    std::string name;
+    int num_item_in_category = 0;
     std::string category_name;
-    while (file_content_stream >> name)
+    while (file_content_stream >> category_name)
     {
-        file_content_stream >> category_name;
+        file_content_stream >> num_item_in_category;
         Item::registerCategory(category_name);
-        Item item(name, category_name);
-        origin_list.push_back(item);
+        for (int i = 0; i < num_item_in_category; i++)
+        {
+            std::string item_name = category_name + "_" + std::to_string(i + 1);
+            Item item(item_name, category_name);
+            origin_list.push_back(item);
+        }
     }
     return origin_list;
 }

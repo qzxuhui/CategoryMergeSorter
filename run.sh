@@ -1,3 +1,3 @@
-rm -r a.out
-g++ -g Main.cpp
-./a.out
+# compile at linux platform
+g++ -O3 -g Main.cpp -o Sorter
+./Sorter

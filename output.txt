@@ -1,10 +1,10 @@
-        a6     A
-        b1     B
-        a5     A
-        b2     B
-        a4     A
-        a3     A
-        b3     B
-        a2     A
-        b4     B
-        a1     A
+A_1       
+B_1       
+A_2       
+B_2       
+A_3       
+A_4       
+B_3       
+A_5       
+B_4       
+A_6       
