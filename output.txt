@@ -1,0 +1,10 @@
+        a6     A
+        b1     B
+        a5     A
+        b2     B
+        a4     A
+        a3     A
+        b3     B
+        a2     A
+        b4     B
+        a1     A

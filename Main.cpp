@@ -3,36 +3,71 @@
 #include <vector>
 #include <iomanip>
 #include <list>
+#include <sstream>
 #include <algorithm>
 #include <map>
 
 class Item
 {
 public:
-    explicit Item(std::string &name_, int category_)
-        : name(name_), category(category_)
+    explicit Item(std::string &name_, std::string category_name)
+        : name(name_)
     {
+        category = map_category_name_to_index[category_name];
     }
+
     void print()
     {
         std::cout << std::setw(10) << name;
         std::cout << std::setw(10) << category;
+        std::cout << "     " << map_category_index_to_name[category];
         std::cout << std::endl;
     }
 
-    static void registerCategory(const std::string &item)
+    void printResults(std::ofstream &fout)
     {
+        fout << std::setw(10) << name;
+        fout << "     " << map_category_index_to_name[category];
+        fout << std::endl;
+    }
+
+    int getCategoryIndex()
+    {
+        return category;
+    }
+
+    static void registerCategory(std::string category_name)
+    {
+        auto pos = map_category_name_to_index.find(category_name);
+        bool flag = (pos == map_category_name_to_index.end()) ? false : true;
+        if (flag == false)
+        {
+            max_category_index++;
+            map_category_name_to_index.insert(
+                std::make_pair(category_name, max_category_index));
+
+            map_category_index_to_name.insert(
+                std::make_pair(max_category_index, category_name));
+        }
+    }
+
+    static int getNumCategory()
+    {
+        return max_category_index + 1;
     }
 
 private:
     std::string name;
     int category;
-    int num_category;
+
+    static int max_category_index;
+    static std::map<std::string, int> map_category_name_to_index;
+    static std::map<int, std::string> map_category_index_to_name;
 };
 
-class Sorter
-{
-};
+int Item::max_category_index = -1;
+std::map<std::string, int> Item::map_category_name_to_index;
+std::map<int, std::string> Item::map_category_index_to_name;
 
 int getSum(std::vector<int> int_vector)
 {
@@ -60,50 +95,36 @@ std::vector<int> sort_indexes(const std::vector<T> &v)
     return idx;
 }
 
-int main()
+std::string parseFileContent(std::ifstream &fin)
 {
-    std::string input_filename = "input.txt";
-    std::ifstream fin;
-    fin.open(input_filename);
-    int num_data;
-    int num_category;
-    fin >> num_data;
-    fin >> num_category;
-    std::cout << "num_data:" << num_data << std::endl;
-    std::cout << "num_category:" << num_category << std::endl;
+    std::stringstream sstr;
+    sstr << fin.rdbuf();
+    return sstr.str();
+}
+
+std::list<Item> getSortItem(std::list<Item> &origin_list)
+{
+    int num_data = origin_list.size();
+    int num_category = Item::getNumCategory();
+    std::list<Item>::iterator origin_it;
     std::vector<std::list<Item>> item_list_vector(num_category);
-    for (int i = 0; i < num_data; i++)
+    for (origin_it = origin_list.begin(); origin_it != origin_list.end(); origin_it++)
     {
-        std::string name;
-        int category;
-        fin >> name;
-        fin >> category;
-        Item item(name, category);
-        item_list_vector[category].push_back(item);
-    }
-    fin.close();
-
-    // print
-    for (int i = 0; i < num_category; i++)
-    {
-        std::cout << "this is category " << i << std::endl;
-        std::list<Item>::iterator it;
-        for (it = item_list_vector[i].begin(); it != item_list_vector[i].end(); it++)
-        {
-            (*it).print();
-        }
+        Item item = (*origin_it);
+        int category_index = item.getCategoryIndex();
+        item_list_vector[category_index].push_back(item);
     }
 
-    std::vector<double> precent_array(num_category);
-    std::vector<int> sum_array(num_category);
+    std::vector<double> expect_precent_in_each_category(num_category);
+    std::vector<int> num_item_in_each_category(num_category);
     for (int i = 0; i < num_category; i++)
     {
-        sum_array[i] = item_list_vector[i].size();
+        num_item_in_each_category[i] = item_list_vector[i].size();
     }
 
     for (int i = 0; i < num_category; i++)
     {
-        precent_array[i] = sum_array[i] * 1.0 / num_data;
+        expect_precent_in_each_category[i] = num_item_in_each_category[i] * 1.0 / num_data;
     }
 
     std::vector<std::list<Item>::iterator> iterator_vector(num_category);
@@ -112,21 +133,11 @@ int main()
         iterator_vector[i] = item_list_vector[i].begin();
     }
 
-    // first add each first item
     std::list<Item> sorted_items;
-    for (int i = 0; i < num_category; i++)
-    {
-        std::list<Item>::iterator &it = iterator_vector[i];
-        Item item = *it;
-        sorted_items.push_back(item);
-        it++;
-    }
-
-    // then add other item into sorted_items by rule
     std::vector<int> count(num_category);
     for (int i = 0; i < num_category; i++)
     {
-        count[i] = 1;
+        count[i] = 0;
     }
 
     while (1)
@@ -136,26 +147,25 @@ int main()
         {
             break;
         }
-
         // find next insert
         std::vector<double> now_percent(num_category);
         for (int i = 0; i < num_category; i++)
         {
             now_percent[i] = count[i] * 1.0 / getSum(count);
         }
-
         std::vector<double> distance_precent(num_category);
         for (int i = 0; i < num_category; i++)
         {
-            distance_precent[i] = now_percent[i] - precent_array[i];
+            distance_precent[i] = now_percent[i] - expect_precent_in_each_category[i];
         }
 
         std::vector<int> index_array = sort_indexes(distance_precent);
 
+        // choose item add into sort list
         for (int i = 0; i < num_category; i++)
         {
             int min_index = index_array[i];
-            if (count[min_index] == sum_array[min_index])
+            if (count[min_index] == num_item_in_each_category[min_index])
             {
                 continue;
             }
@@ -170,14 +180,51 @@ int main()
             }
         }
     }
+    return sorted_items;
+}
 
-    // --------------------------------------------------------
-    std::string output_filename = "output.txt";
+std::list<Item> parseItemListFromFile(std::string input_filename)
+{
+    std::ifstream fin;
+    fin.open(input_filename);
+    std::string file_content = parseFileContent(fin);
+    std::istringstream file_content_stream(file_content);
+    fin.close();
+
+    // parse file content
+    std::list<Item> origin_list;
+    std::string name;
+    std::string category_name;
+    while (file_content_stream >> name)
+    {
+        file_content_stream >> category_name;
+        Item::registerCategory(category_name);
+        Item item(name, category_name);
+        origin_list.push_back(item);
+    }
+    return origin_list;
+}
+
+void exportResult(std::string output_filename, std::list<Item> &sorted_items)
+{
     std::cout << "sort result:" << std::endl;
+    std::ofstream fout;
+    fout.open(output_filename);
     std::list<Item>::iterator sort_it;
     for (sort_it = sorted_items.begin(); sort_it != sorted_items.end(); sort_it++)
     {
         (*sort_it).print();
+        (*sort_it).printResults(fout);
     }
+    fout.close();
+}
+
+int main()
+{
+    std::string input_filename = "input.txt";
+    std::string output_filename = "output.txt";
+    std::list<Item> origin_list = parseItemListFromFile(input_filename);
+    std::list<Item> sorted_items = getSortItem(origin_list);
+    exportResult(output_filename, sorted_items);
     return 0;
 }
